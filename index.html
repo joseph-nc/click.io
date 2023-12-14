@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Click to chat</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css" 
+  rel="stylesheet" />
+<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.light_green-indigo.min.css" />
+<script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+
+<style>
+h2 {
+	color: rgb(144, 182, 73);
+	display: inline-block;
+	vertical-align: middle;
+}
+summary {
+	cursor:pointer;
+}
+
+.mycard {
+	margin-top: 50px;
+	width: 90%;
+	margin-bottom: 50px;
+}
+
+.center {
+	display: flex;
+	justify-content: center;
+}
+
+.border {
+	margin-top: 5px;
+}
+
+.box {
+	display: flex;
+	flex-flow: column;
+	height: 100%;
+	justify-content: space-between;
+	gap: 50px;
+}
+
+.autoWidth {
+	width: auto;
+	max-width: 100%;
+}
+
+</style>
+</head>
+
+
+<body class="center">
+<div class="mycard mdl-card mdl-shadow--2dp"><center class="box mdl-card__supporting-text">
+	<div>
+		<details id="details" ontoggle="changeSetting('hideText', this.open)" open>
+			<h2>Click to chat</h2>
+
+			<br>
+
+		<select id="countries" class="mdl-textfield__input autoWidth" onchange="changeCountry()" hidden>
+			<option value="" disabled>List of prefixes</option>
+			<optgroup label="Sorted By Prefix"></optgroup>
+			<optgroup label="Sorted By Country"></optgroup>
+		</select>
+
+		<span>+</span>
+		<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:5em">
+			<input class="mdl-textfield__input" type="number" id="prefix" oninput="savePrefix();detectCountry()">
+			<label class="mdl-textfield__label" for="prefix">Prefix</label>
+		</div>
+		<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label" style="width:12em">
+			<input class="mdl-textfield__input" type="number" id="number" oninput="updateStatus();detectCountry()">
+			<label class="mdl-textfield__label" for="number">Number</label>
+		</div>
+
+		<br>
+
+		<button id="openWeb" onclick="openWeb()" class="border mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">Open (WhatsApp Web)</button>
+		<button id="openApp" onclick="openApp()" class="border mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored">Open (App)</button>
+		<button id="share" onclick="share()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored border">Share link</button>
+
+	</div>
+
+</center></div>
+
+<script>
+
+// ---------- onle-line utils ----------
+function eId(id){ return document.getElementById(id) || document.createElement('div') }
+function reload(){ window.location.reload(false) } // (false, aka don't fetch again, because the page didn't change)
+
+
+// ---------- buttons ----------
+
+// 'open web' button
+function openWeb(){
+	// opens the web version
+	openLink("https://web.whatsapp.com/send?phone="+getNumber())
+}
+
+// 'open app' button
+function openApp(){
+	// opens the app version
+	openLink("https://wa.me/"+getNumber())
+}
+
+// 'share' button
+function share(){
+	// shares the wa.me number
+	let url = "wa.me/"+getNumber()
+
+	// test
+	if (navigator.share) {
+		// can share
+		navigator.share({
+			title: url,
+			text: url,
+			url: "https://" + url,
+		})
+		.then(() => console.log('Successful share'))
+		.catch((error) => console.log('Error sharing', error))
+	}else if(copyToClipboard(url)){
+		// can copy
+		alert("Url '"+url+"' copied to clipboard")
+	}else{
+		// manual input
+		prompt("Click to chat link: (Ctrl+C to copy)", url)
+	}
+}
+
+// opens a link in a new tab
+function openLink(url){
+	window.open(url)
+}
+
+// copies the text to the clipboard
+function copyToClipboard(text){
+	let inputc = document.body.appendChild(document.createElement("input"))
+	inputc.value = text
+	inputc.focus()
+	inputc.select()
+	let result = document.execCommand('copy')
+	inputc.parentNode.removeChild(inputc)
+	return result
+}
+
+// ---------- input ----------
+
+let EL_PREF = eId('prefix')
+let EL_NUMB = eId('number')
+
+// returns the current input number
+function getNumber(prefixOnly = false){
+	return EL_PREF.value + (prefixOnly ? '' : EL_NUMB.value.replace(/^0+/, ''))
+}
+
+// sets a new number (pref and/or number)
+function setNumber(prefix=undefined,number=undefined){
+	if(prefix != undefined) {
+		// set prexix
+		EL_PREF.value = prefix
+		EL_PREF.dispatchEvent(new Event('input'))
+	}
+	if(number != undefined) {
+		// set number
+		EL_NUMB.value = number
+		EL_NUMB.dispatchEvent(new Event('input'))
+	}
+}
+
+// updates the buttons availability
+function updateStatus(){
+	let disabled = EL_NUMB.value.replace(/^0+/, '') == ""
+	eId('openApp').disabled = disabled
+	eId('openWeb').disabled = disabled
+	eId('share').disabled = disabled
+}
+
+// ---------- country ----------
+
+let EL_COUNTRIES = eId('countries')
+let COUNTRY_URL = "https://raw.githubusercontent.com/TrianguloY/OpenInWhatsapp_Translation/master/res/raw/countries_{}.txt"
+let prefs = []
+let maxPref = 0
+
+// loads the countries
+function loadCountries(){
+	Promise.all([
+		fetch(COUNTRY_URL.replace("{}","ext")).then(e => e.text()),
+		fetch(COUNTRY_URL.replace("{}","name")).then(e => e.text()),
+	]).then(data => {
+
+		// parse the data
+		let extsData = data[0].split('\n')
+		let namesData = data[1].split('\n')
+		if (namesData.length != extsData.length) throw "Invalid length"
+
+		let values = Array.from({
+			length: namesData.length
+		}, (_, i) => i)
+		.flatMap(i =>{
+			let exts = extsData[i].split(';')
+			let names = namesData[i].split(';')
+
+			return exts.flatMap(ext =>
+				names.map(name =>
+					[ext,name]
+				)
+			)
+		})
+
+		// populate options
+		group(values).sort().forEach(([ext, names]) => {
+			let prefVal = ext.replaceAll(' ','')
+			EL_COUNTRIES.children[1].appendChild(new Option('+'+ext+': '+names.join(', '), prefVal))
+
+			prefs.push(prefVal)
+			maxPref = Math.max(maxPref, prefVal.length)
+		})
+		group(values.map(a=>a.reverse())).sort().forEach(([name, exts]) => {
+			EL_COUNTRIES.children[2].appendChild(new Option(name+' (+'+exts.join(', ')+')', exts[0].replaceAll(' ','')))
+		})
+
+		// init
+		detectCountry()
+		EL_COUNTRIES.hidden = false
+		eId("countriesTxt").hidden = false;
+
+	}).catch(console.error)
+}
+
+// detects and sets the current country from the input prefix
+function detectCountry(){
+	if(maxPref == 0) return
+
+	// iterate until find
+	let number = getNumber().substring(0,maxPref)
+	while(number.length>0){
+		if(prefs.indexOf(number) != -1) break
+		number = number.substring(0,number.length-1)
+	}
+	EL_COUNTRIES.value = number
+}
+
+// changes the prefix from the selected option
+function changeCountry(){
+	setNumber(prefix=EL_COUNTRIES.value)
+}
+
+// utility to group an array of pairs from the first group
+// [ [1,2], [1,3], [4,5] ] -> [ [1,[2,3]], [4,[5]] ]
+function group(data){
+	return Object.entries(data.reduce((group, [a, b]) => {
+			if(!(a in group)) group[a] = [];
+			group[a].push(b);
+			return group;
+		}, {}));
+}
+
+// ---------- settings ----------
+
+let KEY_PREFIX_SETTING = "setting_"
+
+// configured settings: name => lambda to apply it
+let settings = {
+	"hideText": v => eId("details").open = v !== "false"
+}
+
+// changes and saves a setting to a value
+function changeSetting(id, v){
+	settings[id](""+v);
+	localStorage.setItem(KEY_PREFIX_SETTING + id, v);
+}
+
+// loads all settings from storage
+function loadSettings(){
+	for(setting in settings){
+		settings[setting](localStorage.getItem(KEY_PREFIX_SETTING + setting));
+	}
+}
+
+// ---------- changelog ----------
+
+// toggles the changelog visibility
+function toggleChangelog(){
+	eId('changelog').hidden = !eId('changelog').hidden
+}
+
+// ---------- prefix ----------
+
+let KEY_PREF = "prefix"
+
+// saves the input prefix into storage
+function savePrefix(){
+	localStorage.setItem(KEY_PREF, getNumber(prefixOnly=true))
+}
+
+// loads the input prefix from storage
+function restorePrefix(){
+	setNumber(prefix=localStorage.getItem(KEY_PREF))
+}
+
+// ---------- clear preferences ----------
+
+// clears the localStorage, notifies the user and reloads the page
+function clearLocalStorage(){
+	if(confirm("Do you want to clear the localStorage? (saved prefix and toggled-title).\nThe page will refresh.")){
+		localStorage.clear()
+		reload()
+	}
+}
+
+</script>
+</body>
+</html>
