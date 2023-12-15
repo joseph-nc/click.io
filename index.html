@@ -84,9 +84,8 @@ summary {
 		<button id="share" onclick="share()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored border">Share link</button>
 
 	</div>
-
+	<h6>Made by Joseph Navarro</h6>
 </center></div>
-
 <script>
 
 // ---------- onle-line utils ----------
@@ -281,13 +280,6 @@ function loadSettings(){
 	for(setting in settings){
 		settings[setting](localStorage.getItem(KEY_PREFIX_SETTING + setting));
 	}
-}
-
-// ---------- changelog ----------
-
-// toggles the changelog visibility
-function toggleChangelog(){
-	eId('changelog').hidden = !eId('changelog').hidden
 }
 
 // ---------- prefix ----------
