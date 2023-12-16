@@ -84,7 +84,24 @@ summary {
 		<button id="share" onclick="share()" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored border">Share link</button>
 
 	</div>
-	<h6>Made by Joseph Navarro</h6>
+	<div>
+
+		<p>
+
+		<!-- This code is licensed under a creative commons license. -->
+		<br> This page is not affiliated with WhatsApp Inc.<br>(<a href="#" onclick="toggleChangelog(); return false;">Info</a>).
+		<pre id="changelog" style="white-space: pre-wrap;" hidden>
+INFORMACION:
+- PREFIX: NO ES OBLIGATORIO.
+- NUMBER: AÑADIR EL NUMERO SIN ESPACIOS O CON " - ".
+		</pre>
+		
+		
+		</p>
+
+	</div>
+
+	<h6>Made by Joseph Navarro ☕</h6>
 </center></div>
 <script>
 
@@ -179,58 +196,6 @@ function updateStatus(){
 	eId('share').disabled = disabled
 }
 
-// ---------- country ----------
-
-let EL_COUNTRIES = eId('countries')
-let COUNTRY_URL = "https://raw.githubusercontent.com/TrianguloY/OpenInWhatsapp_Translation/master/res/raw/countries_{}.txt"
-let prefs = []
-let maxPref = 0
-
-// loads the countries
-function loadCountries(){
-	Promise.all([
-		fetch(COUNTRY_URL.replace("{}","ext")).then(e => e.text()),
-		fetch(COUNTRY_URL.replace("{}","name")).then(e => e.text()),
-	]).then(data => {
-
-		// parse the data
-		let extsData = data[0].split('\n')
-		let namesData = data[1].split('\n')
-		if (namesData.length != extsData.length) throw "Invalid length"
-
-		let values = Array.from({
-			length: namesData.length
-		}, (_, i) => i)
-		.flatMap(i =>{
-			let exts = extsData[i].split(';')
-			let names = namesData[i].split(';')
-
-			return exts.flatMap(ext =>
-				names.map(name =>
-					[ext,name]
-				)
-			)
-		})
-
-		// populate options
-		group(values).sort().forEach(([ext, names]) => {
-			let prefVal = ext.replaceAll(' ','')
-			EL_COUNTRIES.children[1].appendChild(new Option('+'+ext+': '+names.join(', '), prefVal))
-
-			prefs.push(prefVal)
-			maxPref = Math.max(maxPref, prefVal.length)
-		})
-		group(values.map(a=>a.reverse())).sort().forEach(([name, exts]) => {
-			EL_COUNTRIES.children[2].appendChild(new Option(name+' (+'+exts.join(', ')+')', exts[0].replaceAll(' ','')))
-		})
-
-		// init
-		detectCountry()
-		EL_COUNTRIES.hidden = false
-		eId("countriesTxt").hidden = false;
-
-	}).catch(console.error)
-}
 
 // detects and sets the current country from the input prefix
 function detectCountry(){
@@ -296,6 +261,12 @@ function restorePrefix(){
 	setNumber(prefix=localStorage.getItem(KEY_PREF))
 }
 
+// ---------- info ----------
+
+// toggles the changelog visibility
+function toggleChangelog(){
+	eId('changelog').hidden = !eId('changelog').hidden
+}
 // ---------- clear preferences ----------
 
 // clears the localStorage, notifies the user and reloads the page
